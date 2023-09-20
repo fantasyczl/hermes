@@ -41,7 +41,32 @@ func (e Endpoint) RemoteAddr() string {
 	return fmt.Sprintf("%s:%d", e.RemoteHost, e.RemotePort)
 }
 
-func Handle(conn net.Conn, ep Endpoint) {
+func (e Endpoint) StartServe() error {
+	fmt.Printf("start: %s\n", e.String())
+
+	l, err := net.Listen("tcp", e.LocalAddr())
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if e := l.Close(); e != nil {
+			fmt.Printf("close error: %s\n", e)
+		}
+	}()
+
+	for {
+		conn, lErr := l.Accept()
+		if lErr != nil {
+			fmt.Printf("accept error: %s\n", lErr)
+			continue
+		}
+
+		go e.Handle(conn)
+	}
+}
+
+func (e Endpoint) Handle(conn net.Conn) {
 	defer func() {
 		if err := conn.Close(); err != nil {
 			fmt.Printf("close conn error: %s\n", err)
@@ -51,7 +76,7 @@ func Handle(conn net.Conn, ep Endpoint) {
 	dialer := net.Dialer{
 		Timeout: 3 * time.Second,
 	}
-	remote, err := dialer.Dial("tcp", ep.RemoteAddr())
+	remote, err := dialer.Dial("tcp", e.RemoteAddr())
 	if err != nil {
 		fmt.Printf("dial remote: %s\n", err)
 		return

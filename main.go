@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
 	"strconv"
 	"strings"
 
@@ -17,7 +16,7 @@ func main() {
 		return
 	}
 
-	if err = start(point); err != nil {
+	if err = point.StartServe(); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -32,6 +31,7 @@ func parseFlags() (e proxy.Endpoint, err error) {
 
 	if p == "" {
 		flag.Usage()
+		err = fmt.Errorf("p is empty")
 		return
 	}
 
@@ -62,29 +62,4 @@ func parseStrToEndpoint(s string) (e proxy.Endpoint, err error) {
 	}
 
 	return
-}
-
-func start(ep proxy.Endpoint) error {
-	fmt.Printf("start: %s\n", ep.String())
-
-	l, err := net.Listen("tcp", ep.LocalAddr())
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if e := l.Close(); e != nil {
-			fmt.Printf("close error: %s\n", e)
-		}
-	}()
-
-	for {
-		conn, lErr := l.Accept()
-		if lErr != nil {
-			fmt.Printf("accept error: %s\n", lErr)
-			continue
-		}
-
-		go proxy.Handle(conn, ep)
-	}
 }
